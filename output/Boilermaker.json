@@ -1,1 +1,1 @@
-{"name": "Boilermaker", "ingredients": [{"quantity": "1", "item": "Bourbon or rye whiskey", "unit": "oz"}, {}]}
+{"name": "Boilermaker", "ingredients": [{"quantity": "1", "item": "Bourbon or rye whiskey", "unit": "oz"}, {"quantity": null, "item": "Beer", "unit": null}], "garnish": [], "glass": "Shot and pint", "preparation": "Pour the whiskey into a shot glass.\nFill a pint glass halfway with beer.\nDrop the shot glass into the beer.", "imageURL": "//cdn.liquor.com/wp-content/uploads/2014/02/15123838/boilermaker-720-720-recipe.jpg"}

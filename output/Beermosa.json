@@ -1,1 +1,1 @@
-{"name": "Beermosa", "ingredients": [{"quantity": "12", "item": "Light lager", "unit": "oz"}, {"quantity": "4", "item": "Fresh orange juice", "unit": "oz"}]}
+{"name": "Beermosa", "ingredients": [{"quantity": "12", "item": "Light lager", "unit": "oz"}, {"quantity": "4", "item": "Fresh orange juice", "unit": "oz"}], "garnish": ["Orange wheel"], "glass": "Pint", "preparation": "Fill a chilled beer glass with the lager, and top with the orange juice.\nGarnish with an orange wheel.", "imageURL": "//cdn.liquor.com/wp-content/uploads/2016/08/18130804/beermosa-720x720-recipe.jpg"}
