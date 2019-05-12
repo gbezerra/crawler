@@ -11,15 +11,13 @@ class CocktailSpider(scrapy.Spider):
     def __init__(self):
         super(CocktailSpider, self).__init__()
         self.base_url = 'https://www.liquor.com/recipes/'
-        self.file = open('result.json', 'w')
-        self.count = 0
 
     def start_requests(self):
         urls = [
             self.base_url,
         ]
-        # for i in range(1, 45):
-        #    urls.append(self.base_url + '/page/' + str(i) + '/')
+        for i in range(1, 45):
+            urls.append(self.base_url + '/page/' + str(i) + '/')
 
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse)
@@ -61,22 +59,23 @@ class CocktailSpider(scrapy.Spider):
         return ingredient
 
     def parse_cocktail(self, response):
-        # pdb.set_trace()
+        # parse cocktail name
         name = response.css('div.col-xs-12').css('h1').get()
         name = BeautifulSoup(name).get_text()
+
+        # parse ingredients
         ingredient_list = []
         for ingredient in response.css('div.col-xs-3.text-right').css('div.hide').getall():
             soup = BeautifulSoup(ingredient)
             text = soup.get_text()
             print(text)
             ingredient_list.append(self.parse_ingredient(text))
+
+        # write contents to file
         cocktail = {'name': name,
                     'ingredients': ingredient_list}
-
-        recipe = {self.count: cocktail}
-        self.count += 1
-
-        json.dump(recipe, self.file)
+        with open('../output/' + name + '.json', 'w') as f:
+            json.dump(cocktail, f)
 
     def parse(self, response):
         print("got response")
