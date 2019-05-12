@@ -2,36 +2,42 @@ import scrapy
 import pdb
 from bs4 import BeautifulSoup
 import re
+import json
+
 
 class CocktailSpider(scrapy.Spider):
     name = "cocktails"
 
     def __init__(self):
         super(CocktailSpider, self).__init__()
-        self.counter = 0
         self.base_url = 'https://www.liquor.com/recipes/'
+        self.file = open('result.json', 'w')
+        self.count = 0
 
     def start_requests(self):
         urls = [
             self.base_url,
         ]
+        # for i in range(1, 45):
+        #    urls.append(self.base_url + '/page/' + str(i) + '/')
+
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse)
 
     def parse_ingredient(self, text):
         text = text.replace('\xa0', ' ')
-        patterns =  [['oz', r"([\d\⁄\s]+)\s+oz\s+(.+)"],
-        ['tsp', r"([\d\⁄\s]+)\s+tsp\s+(.+)"],
-        ['pinch', r"([\d\⁄\s]+)\s+pinch\s+(.+)"],
-        ['scoop', r"([\d\⁄\s]+)\s+scoop\s+(.+)"],
-        ['leaves', r"([\d\⁄\s]+)\s+(leaves|leaf)\s+(.+)"],
-        ['splashes', r"([\d\⁄\s]+)\s+(splash|splashes)\s+(.+)"],
-        ['dashes', r"([\d\⁄\s]+)\s+(dashes|dash)\s+(.+)" ],
-        ['top', r"\s*(.+),\s+to\s+(t|T)op"],
-        ['rinse', r"\s*(.+),\s+to\s+rinse"],
-        ['splash', r'.*Splash of (.+)'],
-        ['whole', r"([\d\⁄\s]+)\s+(.+)"],
-        ]
+        patterns = [['oz', r"([\d\⁄\s]+)\s+oz\s+(.+)"],
+                    ['tsp', r"([\d\⁄\s]+)\s+tsp\s+(.+)"],
+                    ['pinch', r"([\d\⁄\s]+)\s+pinch\s+(.+)"],
+                    ['scoop', r"([\d\⁄\s]+)\s+scoop\s+(.+)"],
+                    ['leaves', r"([\d\⁄\s]+)\s+(leaves|leaf)\s+(.+)"],
+                    ['splashes', r"([\d\⁄\s]+)\s+(splash|splashes)\s+(.+)"],
+                    ['dashes', r"([\d\⁄\s]+)\s+(dashes|dash)\s+(.+)"],
+                    ['top', r"\s*(.+),\s+to\s+(t|T)op"],
+                    ['rinse', r"\s*(.+),\s+to\s+rinse"],
+                    ['splash', r'.*Splash of (.+)'],
+                    ['whole', r"([\d\⁄\s]+)\s+(.+)"],
+                    ]
         ingredient = {}
         for unit, expr in patterns:
             result = re.match(expr, text)
@@ -49,35 +55,32 @@ class CocktailSpider(scrapy.Spider):
                     ingredient['item'] = result.group(2).strip()
                     ingredient['unit'] = None
                 break
-        if 'quantity' not in ingredient:
-            pdb.set_trace()
+        # if 'quantity' not in ingredient:
+        #    pdb.set_trace()
         print('ingredient:', ingredient)
-        yield ingredient
-        
-        
+        return ingredient
 
     def parse_cocktail(self, response):
-        #pdb.set_trace()
+        # pdb.set_trace()
+        name = response.css('div.col-xs-12').css('h1').get()
+        name = BeautifulSoup(name).get_text()
+        ingredient_list = []
         for ingredient in response.css('div.col-xs-3.text-right').css('div.hide').getall():
             soup = BeautifulSoup(ingredient)
             text = soup.get_text()
             print(text)
-            self.parse_ingredient(text)
-            
-            #yield {
-            #    'name': quote.css('span.text::text').get(),
-            #} 
-            #print("\nIngredient:", ingredient)
-        #pdb.set_trace()
+            ingredient_list.append(self.parse_ingredient(text))
+        cocktail = {'name': name,
+                    'ingredients': ingredient_list}
+
+        recipe = {self.count: cocktail}
+        self.count += 1
+
+        json.dump(recipe, self.file)
 
     def parse(self, response):
         print("got response")
         for url in response.css('a.overlay::attr(href)').getall():
             print("url", self.base_url + url)
-            #pdb.set_trace()
+            # pdb.set_trace()
             yield scrapy.Request(url=self.base_url + url, callback=self.parse_cocktail)
-        if self.counter < 44:
-            self.counter += 1
-            url = self.base_url + '/page/' + str(self.counter) + '/'
-            yield scrapy.Request(url=url, callback=self.parse)
-            
