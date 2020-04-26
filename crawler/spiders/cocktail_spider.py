@@ -11,7 +11,7 @@ class CocktailSpider(scrapy.Spider):
 
     def __init__(self):
         super(CocktailSpider, self).__init__()
-        #self.base_url = 'https://www.liquor.com/recipes/'
+        # self.base_url = 'https://www.liquor.com/recipes/'
 
     def start_requests(self):
         with open("../urls.txt") as f:
@@ -86,14 +86,21 @@ class CocktailSpider(scrapy.Spider):
         return ingredient
 
     def parse_cocktail(self, response):
-        # parse cocktail name
-        #name = response.css('div.col-xs-12').css('h1').get()
-        #name = response.css('.heading__title').css('h1').get()
-        #name = BeautifulSoup(name).get_text()
-        print('cocktail name:', response.text)
 
-        # # parse ingredients
-        # ingredient_list = []
+        # parse cocktail name
+        soup = BeautifulSoup(response.text, 'html.parser')
+        name = soup.find('h1', {'class': 'heading__title'}).get_text()
+        print('cocktail name:', name)
+
+        # parse ingredients
+        ingredient_list = []
+        ingredients = soup.findAll('li', {'class': 'simple-list__item'})
+        for ing in ingredients:
+            print(ing.get_text().strip())
+
+        # for ing in ingredients:
+        #    print(ing.get_text())
+
         # for ingredient in response.css('div.col-xs-3.text-right').css('div.hide').getall():
         #     soup = BeautifulSoup(ingredient)
         #     text = soup.get_text()
