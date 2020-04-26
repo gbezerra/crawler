@@ -7,20 +7,30 @@ import json
 
 class CocktailSpider(scrapy.Spider):
     name = "cocktails"
+    handle_httpstatus_list = [301]
 
     def __init__(self):
         super(CocktailSpider, self).__init__()
-        self.base_url = 'https://www.liquor.com/recipes/'
+        #self.base_url = 'https://www.liquor.com/recipes/'
 
     def start_requests(self):
-        urls = [
-            self.base_url,
-        ]
-        for i in range(1, 45):
-            urls.append(self.base_url + '/page/' + str(i) + '/')
+        with open("../urls.txt") as f:
+            urls = f.readlines()
+        urls = [e[:-1] for e in urls]
 
-        for url in urls:
-            yield scrapy.Request(url=url, callback=self.parse)
+        for url in urls[:10]:
+            print("URL starting:", url)
+            yield scrapy.Request(url=url, callback=self.parse_cocktail)
+
+    # def start_requests(self):
+    #     urls = [
+    #         self.base_url,
+    #     ]
+    #     for i in range(1, 45):
+    #         urls.append(self.base_url + '/page/' + str(i) + '/')
+
+    #     for url in urls:
+    #         yield scrapy.Request(url=url, callback=self.parse)
 
     def parse_ingredient(self, text):
 
@@ -28,6 +38,8 @@ class CocktailSpider(scrapy.Spider):
             expr = text.replace(' ', '+').replace('⁄', '/')
             quantity = eval(expr)
             return quantity
+
+        print(text)
 
         text = text.replace('\xa0', ' ')
         patterns = [['oz', r"([\d\⁄\s]+)\s+oz\s+(.+)"],
@@ -75,50 +87,51 @@ class CocktailSpider(scrapy.Spider):
 
     def parse_cocktail(self, response):
         # parse cocktail name
-        name = response.css('div.col-xs-12').css('h1').get()
-        name = BeautifulSoup(name).get_text()
-        print('cocktail name:', name)
+        #name = response.css('div.col-xs-12').css('h1').get()
+        #name = response.css('.heading__title').css('h1').get()
+        #name = BeautifulSoup(name).get_text()
+        print('cocktail name:', response.text)
 
-        # parse ingredients
-        ingredient_list = []
-        for ingredient in response.css('div.col-xs-3.text-right').css('div.hide').getall():
-            soup = BeautifulSoup(ingredient)
-            text = soup.get_text()
-            print(text)
-            ingredient_list.append(self.parse_ingredient(text))
+        # # parse ingredients
+        # ingredient_list = []
+        # for ingredient in response.css('div.col-xs-3.text-right').css('div.hide').getall():
+        #     soup = BeautifulSoup(ingredient)
+        #     text = soup.get_text()
+        #     print(text)
+        #     ingredient_list.append(self.parse_ingredient(text))
 
-        # parse garnish
-        garnish_list = []
-        for garnish in set(response.css('div.row.x-recipe-garnish').css('span.oz-value').getall()):
-            soup = BeautifulSoup(garnish)
-            text = soup.get_text()
-            print('Garnish:', text)
-            garnish_list.append(text.strip())
+        # # parse garnish
+        # garnish_list = []
+        # for garnish in set(response.css('div.row.x-recipe-garnish').css('span.oz-value').getall()):
+        #     soup = BeautifulSoup(garnish)
+        #     text = soup.get_text()
+        #     print('Garnish:', text)
+        #     garnish_list.append(text.strip())
 
-        # parse glass
-        glass = response.css('div.row.x-recipe-glasstype').css('a::text').get()
+        # # parse glass
+        # glass = response.css('div.row.x-recipe-glasstype').css('a::text').get()
 
-        # parse preparation
-        preparation = '\n'.join(response.css(
-            'div.row.x-recipe-prep').css('p::text').getall())
+        # # parse preparation
+        # preparation = '\n'.join(response.css(
+        #     'div.row.x-recipe-prep').css('p::text').getall())
 
-        # parse image url
-        image_url = response.css(
-            'img.wp-post-image.img-responsive::attr(src)').get()
+        # # parse image url
+        # image_url = response.css(
+        #     'img.wp-post-image.img-responsive::attr(src)').get()
 
-        # write contents to file
-        cocktail = {'name': name,
-                    'ingredients': ingredient_list,
-                    'garnish': garnish_list,
-                    'glass': glass,
-                    'preparation': preparation,
-                    'imageURL': image_url}
-        with open('../output/' + name + '.json', 'w') as f:
-            json.dump(cocktail, f)
+        # # write contents to file
+        # cocktail = {'name': name,
+        #             'ingredients': ingredient_list,
+        #             'garnish': garnish_list,
+        #             'glass': glass,
+        #             'preparation': preparation,
+        #             'imageURL': image_url}
+        # with open('../output/' + name + '.json', 'w') as f:
+        #     json.dump(cocktail, f)
 
-    def parse(self, response):
-        print("got response")
-        for url in response.css('a.overlay::attr(href)').getall():
-            print("url", self.base_url + url)
-            # pdb.set_trace()
-            yield scrapy.Request(url=self.base_url + url, callback=self.parse_cocktail)
+    # def parse(self, response):
+    #     print("got response")
+    #     for url in response.css('a.overlay::attr(href)').getall():
+    #         print("url", url)
+    #         # pdb.set_trace()
+    #         yield scrapy.Request(url=url, callback=self.parse_cocktail)
