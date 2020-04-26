@@ -1,2 +1,5 @@
+list_url_spider.py: this spider crawls liquor.com to retrieve all recipe urls.
+cocktail_spider.py: scans urls and extracts recipes into json files.
+
 To run:
 scrapy runspider spiders/cocktail_spider.py

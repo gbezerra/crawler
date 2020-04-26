@@ -1,2 +1,5 @@
 *.pyc
 .DS_Store*
+__pycache__
+crawler/__pycache__
+crawler/spider/__pycache__
