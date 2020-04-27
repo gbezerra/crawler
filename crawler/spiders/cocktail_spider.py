@@ -160,13 +160,13 @@ class CocktailSpider(scrapy.Spider):
                     'authorName': author_name,
                     'reviewCount': review_count,
                     'avgRating': rating}
-        filename = re.sub(r'[^a-zA-Z0-9_ \-]+', '',
-                          name).lower().replace(' ', '-')
-        return cocktail, filename
+
+        return cocktail
 
     def parse(self, response):
+        filename = response.url.split('/')[-2]
         try:
-            cocktail, filename = self.parse_cocktail(response)
+            cocktail = self.parse_cocktail(response)
             with open('../output/' + filename + '.json', 'w') as f:
                 json.dump(cocktail, f)
             with open('../successful_urls.txt', 'a') as f:
