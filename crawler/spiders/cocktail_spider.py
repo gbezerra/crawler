@@ -23,9 +23,9 @@ class CocktailSpider(scrapy.Spider):
                            "https://www.liquor.com/recipes/vanilla-orangecello/",
                            "https://www.liquor.com/recipes/aberlour-number-402/",
                            "https://www.liquor.com/recipes/vodka-red-bull/"]
-        for url in urls[:100]:  # + additional_urls:
+        for url in urls:  # [:10] + additional_urls:
             print("URL starting:", url)
-            yield scrapy.Request(url=url, callback=self.parse_cocktail)
+            yield scrapy.Request(url=url, callback=self.parse)
 
     def parse_ingredient(self, text):
 
@@ -162,5 +162,15 @@ class CocktailSpider(scrapy.Spider):
                     'avgRating': rating}
         filename = re.sub(r'[^a-zA-Z0-9_ \-]+', '',
                           name).lower().replace(' ', '-')
-        with open('../output/' + filename + '.json', 'w') as f:
-            json.dump(cocktail, f)
+        return cocktail, filename
+
+    def parse(self, response):
+        try:
+            cocktail, filename = self.parse_cocktail(response)
+            with open('../output/' + filename + '.json', 'w') as f:
+                json.dump(cocktail, f)
+            with open('../successful_urls.txt', 'a') as f:
+                f.write(response.url + '\n')
+        except:
+            with open('../unsuccessful_urls.txt', 'a') as f:
+                f.write(response.url + '\n')
