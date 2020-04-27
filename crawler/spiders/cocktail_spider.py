@@ -21,19 +21,13 @@ class CocktailSpider(scrapy.Spider):
                            "https://www.liquor.com/recipes/bourbon-old-fashioned/",
                            "https://www.liquor.com/recipes/mollymock/",
                            "https://www.liquor.com/recipes/vanilla-orangecello/",
-                           "https://www.liquor.com/recipes/aberlour-number-402/"]
-        for url in urls[:0] + additional_urls:
+                           "https://www.liquor.com/recipes/aberlour-number-402/",
+                           "https://www.liquor.com/recipes/vodka-red-bull/"]
+        for url in urls[:100]:  # + additional_urls:
             print("URL starting:", url)
             yield scrapy.Request(url=url, callback=self.parse_cocktail)
 
     def parse_ingredient(self, text):
-
-        def parse_quantity(text):
-            expr = text.replace(' ', '+').replace('⁄', '/')
-            quantity = eval(expr)
-            return quantity
-
-        # print(text)
 
         ingredient = {}
 
@@ -47,16 +41,19 @@ class CocktailSpider(scrapy.Spider):
             return ingredient
 
         # handle ingrients
-        text = text.replace('\xa0', ' ').replace('⁄', '/').lower()
-        pattern1 = [['oz', r"([\d\/\s]+)\s+(oz|ounce|ounces)\s+(.+)"],
-                    ['dashes', r"([\d\/\s]+)\s+(dashes|dash)\s+(.+)"],
+        text = text.replace('\xa0', ' ').replace('⁄', '/')
+        pattern1 = [['oz', r"([\d\/\s]+)\s+(oz|ounce|ounces|Ounce|Ounces)\s+(.+)"],
+                    ['dashes',
+                        r"([\d\/\s]+)\s+(dashes|dash|Dash|Dashes)\s+(.+)"],
                     ['tsp', r"([\d\/\s]+)\s+(tsp)\s+(.+)"],
-                    ['cup', r"([\d\/\s]+)\s+(cup|cups)\s+(.+)"],
-                    ['pinch', r"([\d\/\s]+)\s+(pinch)\s+(.+)"],
-                    ['scoop', r"([\d\/\s]+)\s+(scoop|scoops)\s+(.+)"],
-                    ['parts', r"([\d\/\s]+)\s+(part|parts)\s+(.+)"],
-                    ['bsp', r"([\d\/\s]+)\s+(bsp|barspoon|barspoons)\s+(.+)"],
-                    ['bottle', r"([\d\/\s]+)\s+(bottle|bottles)\s+(.+)"],
+                    ['tbsp', r"([\d\/\s]+)\s+(tbsp)\s+(.+)"],
+                    ['cup', r"([\d\/\s]+)\s+(cup|cups|Cup|Cups)\s+(.+)"],
+                    ['pinch', r"([\d\/\s]+)\s+(pinch|Pinch)\s+(.+)"],
+                    ['scoop', r"([\d\/\s]+)\s+(scoop|scoops|Scoop|Scoops)\s+(.+)"],
+                    ['parts', r"([\d\/\s]+)\s+(part|parts|Part|Parts)\s+(.+)"],
+                    ['bsp', r"([\d\/\s]+)\s+(bsp|barspoon|barspoons|Barspoon|Barspoons)\s+(.+)"],
+                    ['bottle',
+                        r"([\d\/\s]+)\s+(bottle|bottles|Bottle|Bottles)\s+(.+)"],
                     ]
 
         pattern2 = [
@@ -102,7 +99,7 @@ class CocktailSpider(scrapy.Spider):
             ingredient['quantity'] = ""
             ingredient['item'] = text.split(',')[0].strip()
             ingredient['unit'] = ""
-            ingredient['isGarnish'] = False
+        ingredient['isGarnish'] = False
         return ingredient
 
     def parse_cocktail(self, response):
@@ -127,18 +124,43 @@ class CocktailSpider(scrapy.Spider):
             prep = prep.get_text().strip()
             preparation_text.append(prep)
         preparation_text = '\n\n'.join(preparation_text)
-        print(preparation_text)
+        # print(preparation_text)
 
         # parse image url
         image = soup.find('img', {'class': 'primary-image'})
         image = image['src']
 
-        # # write contents to file
-        # cocktail = {'name': name,
-        #             'ingredients': ingredient_list,
-        #             'garnish': garnish_list,
-        #             'glass': glass,
-        #             'preparation': preparation,
-        #             'imageURL': image_url}
-        # with open('../output/' + name + '.json', 'w') as f:
-        #     json.dump(cocktail, f)
+        # parse star rating
+        try:
+            review_count = soup.find(
+                'div', {'class': 'aggregate-star-rating__count'}).get_text()
+            review_count = int(review_count.split()[0])
+            #print("Review count:", review_count)
+            rating = len(soup.findAll('a', {'class': 'active'}))
+            rating += len(soup.findAll('a', {'class': 'half'})) / 2
+            #print("Rating:", rating)
+        except:
+            review_count = None
+            rating = None
+
+        # parse author name
+        try:
+            author_name = soup.find(
+                'span', {'class': 'mntl-byline__span'}).get_text().strip()
+        except:
+            author_name = soup.find('div', {"id": "mntl-byline__name_1-0"}).find(
+                'span', {'class': "link__wrapper"}).get_text().strip()
+        #print("author name:", author_name)
+
+        # write contents to file
+        cocktail = {'name': name,
+                    'ingredients': ingredient_list,
+                    'preparation': preparation_text,
+                    'imageURL': image,
+                    'authorName': author_name,
+                    'reviewCount': review_count,
+                    'avgRating': rating}
+        filename = re.sub(r'[^a-zA-Z0-9_ \-]+', '',
+                          name).lower().replace(' ', '-')
+        with open('../output/' + filename + '.json', 'w') as f:
+            json.dump(cocktail, f)
