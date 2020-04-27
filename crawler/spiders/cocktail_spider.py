@@ -11,26 +11,20 @@ class CocktailSpider(scrapy.Spider):
 
     def __init__(self):
         super(CocktailSpider, self).__init__()
-        # self.base_url = 'https://www.liquor.com/recipes/'
 
     def start_requests(self):
         with open("../urls.txt") as f:
             urls = f.readlines()
         urls = [e[:-1] for e in urls]
 
-        for url in urls[:10]:
+        additional_urls = ['https://www.liquor.com/recipes/teeling-butter-and-scotch-irish-coffee/',
+                           "https://www.liquor.com/recipes/bourbon-old-fashioned/",
+                           "https://www.liquor.com/recipes/mollymock/",
+                           "https://www.liquor.com/recipes/vanilla-orangecello/",
+                           "https://www.liquor.com/recipes/aberlour-number-402/"]
+        for url in urls[:0] + additional_urls:
             print("URL starting:", url)
             yield scrapy.Request(url=url, callback=self.parse_cocktail)
-
-    # def start_requests(self):
-    #     urls = [
-    #         self.base_url,
-    #     ]
-    #     for i in range(1, 45):
-    #         urls.append(self.base_url + '/page/' + str(i) + '/')
-
-    #     for url in urls:
-    #         yield scrapy.Request(url=url, callback=self.parse)
 
     def parse_ingredient(self, text):
 
@@ -39,50 +33,76 @@ class CocktailSpider(scrapy.Spider):
             quantity = eval(expr)
             return quantity
 
-        print(text)
+        # print(text)
 
-        text = text.replace('\xa0', ' ')
-        patterns = [['oz', r"([\d\⁄\s]+)\s+oz\s+(.+)"],
-                    ['tsp', r"([\d\⁄\s]+)\s+tsp\s+(.+)"],
-                    ['pinch', r"([\d\⁄\s]+)\s+pinch\s+(.+)"],
-                    ['scoop', r"([\d\⁄\s]+)\s+scoop\s+(.+)"],
-                    ['leaves', r"([\d\⁄\s]+)\s+(leaves|leaf)\s+(.+)"],
-                    ['splashes', r"([\d\⁄\s]+)\s+(splash|splashes)\s+(.+)"],
-                    ['dashes', r"([\d\⁄\s]+)\s+(dashes|dash)\s+(.+)"],
-                    ['top', r"\s*(.+),\s+to\s+(t|T)op"],
-                    ['rinse', r"\s*(.+),\s+to\s+rinse"],
-                    ['mist', r"\s*(.+),\s+to\s+mist"],
-                    ['coating', r"\s*(.+),\s+for\s+coating"],
-                    ['drizzling', r"\s*(.+),\s+for\s+drizzling"],
-                    ['serving', r"\s*(.+),\s+for\s+serving"],
-                    ['splash', r'.*Splash of (.+)'],
-                    ['whole', r"([\d\⁄\s]+)\s+(.+)"],
-                    ]
         ingredient = {}
-        for unit, expr in patterns:
+
+        # handle garnish
+        if text.startswith("Garnish:"):
+            text = text.replace("Garnish:", '')
+            ingredient['quantity'] = ""
+            ingredient['item'] = text.split(',')[0].strip()
+            ingredient['unit'] = ""
+            ingredient['isGarnish'] = True
+            return ingredient
+
+        # handle ingrients
+        text = text.replace('\xa0', ' ').replace('⁄', '/').lower()
+        pattern1 = [['oz', r"([\d\/\s]+)\s+(oz|ounce|ounces)\s+(.+)"],
+                    ['dashes', r"([\d\/\s]+)\s+(dashes|dash)\s+(.+)"],
+                    ['tsp', r"([\d\/\s]+)\s+(tsp)\s+(.+)"],
+                    ['cup', r"([\d\/\s]+)\s+(cup|cups)\s+(.+)"],
+                    ['pinch', r"([\d\/\s]+)\s+(pinch)\s+(.+)"],
+                    ['scoop', r"([\d\/\s]+)\s+(scoop|scoops)\s+(.+)"],
+                    ['parts', r"([\d\/\s]+)\s+(part|parts)\s+(.+)"],
+                    ['bsp', r"([\d\/\s]+)\s+(bsp|barspoon|barspoons)\s+(.+)"],
+                    ['bottle', r"([\d\/\s]+)\s+(bottle|bottles)\s+(.+)"],
+                    ]
+
+        pattern2 = [
+            ['top', r"\s*(.+),\s+to\s+(t|T)op"],
+            ['rinse', r"\s*(.+),\s+to\s+rinse"],
+            ['mist', r"\s*(.+),\s+to\s+mist"],
+            ['coating', r"\s*(.+),\s+for\s+coating"],
+            ['drizzling', r"\s*(.+),\s+for\s+drizzling"],
+            ['serving', r"\s*(.+),\s+for\s+serving"],
+        ]
+
+        pattern3 = [['whole', r"([\d\/\s]+)\s+(.+)"], ]
+
+        result = None
+        for unit, expr in pattern1:
             result = re.match(expr, text)
             if result:
-                if unit in ('oz', 'dashes', 'tsp', 'pinch', 'leaves', 'splashes', 'scoop'):
-                    ingredient['quantity'] = result.group(
-                        1).strip().replace('⁄', '/')
-                    ingredient['item'] = result.group(2).strip()
-                    ingredient['unit'] = unit
-                elif unit in ('top', 'splash', 'rinse', 'coating', 'drizzling', 'serving', 'mist'):
-                    ingredient['quantity'] = None
+                ingredient['quantity'] = result.group(
+                    1).strip()
+                ingredient['item'] = result.group(3).strip()
+                ingredient['unit'] = unit
+                break
+        if not result:
+            for unit, expr in pattern2:
+                result = re.match(expr, text)
+                if result:
+                    ingredient['quantity'] = ""
                     ingredient['item'] = result.group(1).strip()
                     ingredient['unit'] = unit
-                elif unit in ('whole'):
+                    break
+
+        if not result:
+            for unit, expr in pattern3:
+                result = re.match(expr, text)
+                if result:
                     ingredient['quantity'] = result.group(
-                        1).strip().replace('⁄', '/')
+                        1).strip()
                     ingredient['item'] = result.group(2).strip()
-                    ingredient['unit'] = None
-                break
+                    ingredient['unit'] = ""
+                    break
 
         if 'quantity' not in ingredient:
-            ingredient['quantity'] = None
+            ingredient['quantity'] = ""
             ingredient['item'] = text.split(',')[0].strip()
-            ingredient['unit'] = None
-        print('ingredient:', ingredient)
+            ingredient['unit'] = ""
+            ingredient['isGarnish'] = False
         return ingredient
 
     def parse_cocktail(self, response):
@@ -96,35 +116,22 @@ class CocktailSpider(scrapy.Spider):
         ingredient_list = []
         ingredients = soup.findAll('li', {'class': 'simple-list__item'})
         for ing in ingredients:
-            print(ing.get_text().strip())
+            ing = self.parse_ingredient(ing.get_text().strip())
+            ingredient_list.append(ing)
+            #print('ingredient:', ing)
 
-        # for ing in ingredients:
-        #    print(ing.get_text())
+        # parse preparation
+        preparation_text = []
+        preparation = soup.findAll('div', {'class': 'mntl-sc-block-html'})
+        for prep in preparation:
+            prep = prep.get_text().strip()
+            preparation_text.append(prep)
+        preparation_text = '\n\n'.join(preparation_text)
+        print(preparation_text)
 
-        # for ingredient in response.css('div.col-xs-3.text-right').css('div.hide').getall():
-        #     soup = BeautifulSoup(ingredient)
-        #     text = soup.get_text()
-        #     print(text)
-        #     ingredient_list.append(self.parse_ingredient(text))
-
-        # # parse garnish
-        # garnish_list = []
-        # for garnish in set(response.css('div.row.x-recipe-garnish').css('span.oz-value').getall()):
-        #     soup = BeautifulSoup(garnish)
-        #     text = soup.get_text()
-        #     print('Garnish:', text)
-        #     garnish_list.append(text.strip())
-
-        # # parse glass
-        # glass = response.css('div.row.x-recipe-glasstype').css('a::text').get()
-
-        # # parse preparation
-        # preparation = '\n'.join(response.css(
-        #     'div.row.x-recipe-prep').css('p::text').getall())
-
-        # # parse image url
-        # image_url = response.css(
-        #     'img.wp-post-image.img-responsive::attr(src)').get()
+        # parse image url
+        image = soup.find('img', {'class': 'primary-image'})
+        image = image['src']
 
         # # write contents to file
         # cocktail = {'name': name,
@@ -135,10 +142,3 @@ class CocktailSpider(scrapy.Spider):
         #             'imageURL': image_url}
         # with open('../output/' + name + '.json', 'w') as f:
         #     json.dump(cocktail, f)
-
-    # def parse(self, response):
-    #     print("got response")
-    #     for url in response.css('a.overlay::attr(href)').getall():
-    #         print("url", url)
-    #         # pdb.set_trace()
-    #         yield scrapy.Request(url=url, callback=self.parse_cocktail)
