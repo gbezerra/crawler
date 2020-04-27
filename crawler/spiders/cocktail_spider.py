@@ -35,7 +35,7 @@ class CocktailSpider(scrapy.Spider):
         if text.startswith("Garnish:"):
             text = text.replace("Garnish:", '')
             ingredient['quantity'] = ""
-            ingredient['item'] = text.split(',')[0].strip()
+            ingredient['name'] = text.split(',')[0].strip()
             ingredient['unit'] = ""
             ingredient['isGarnish'] = True
             return ingredient
@@ -73,7 +73,7 @@ class CocktailSpider(scrapy.Spider):
             if result:
                 ingredient['quantity'] = result.group(
                     1).strip()
-                ingredient['item'] = result.group(3).strip()
+                ingredient['name'] = result.group(3).strip()
                 ingredient['unit'] = unit
                 break
         if not result:
@@ -81,7 +81,7 @@ class CocktailSpider(scrapy.Spider):
                 result = re.match(expr, text)
                 if result:
                     ingredient['quantity'] = ""
-                    ingredient['item'] = result.group(1).strip()
+                    ingredient['name'] = result.group(1).strip()
                     ingredient['unit'] = unit
                     break
 
@@ -91,13 +91,13 @@ class CocktailSpider(scrapy.Spider):
                 if result:
                     ingredient['quantity'] = result.group(
                         1).strip()
-                    ingredient['item'] = result.group(2).strip()
+                    ingredient['name'] = result.group(2).strip()
                     ingredient['unit'] = ""
                     break
 
         if 'quantity' not in ingredient:
             ingredient['quantity'] = ""
-            ingredient['item'] = text.split(',')[0].strip()
+            ingredient['name'] = text.split(',')[0].strip()
             ingredient['unit'] = ""
         ingredient['isGarnish'] = False
         return ingredient
